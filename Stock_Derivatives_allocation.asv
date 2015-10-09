@@ -1,0 +1,60 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% This sript computes optimal allocations of combined stock and derviatives
+% Each of the optimal allocations computed corresponds to an gama in the
+% gama array that represent different levels of risk aversion. 
+% Author: Miel Zozaya Garcia
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+clc; clear; close all;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% tau/tau(tilda)
+horizon = 20;
+% option expiry date
+v = 10*7/365;
+r = 0.05;
+J = 10000;
+budget = 1000000;
+gamas = [-2 -4 -6 -9];
+NumOfPortf = 30;
+
+%Load Data
+load TimeSeries;
+
+%Separate Data
+stock_ts = data(:,1:end/2);
+iv_ts = data(:,end/2+1:end);
+% Get investment decision time values
+stock_pt = stock_ts(end,:);
+iv_pt = iv_ts(end,:);
+% Get options prices at investment decision time
+[call_pt,Put] = blsprice(stock_pt, stock_pt, r, v, iv_pt);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%Invariants and their distribution
+% Stock Invariants
+% Compute compounded returns
+comp_returns_t = compreturns(stock_ts);
+comp_mean_t = mean(comp_returns_t);
+comp_cov_t = cov(comp_returns_t);
+
+% Option Invariants
+%  Changes in ATM IV
+iv_change_t = change (iv_ts);
+civ_mean_t = mean(iv_change_t);
+civ_cov_t = cov(iv_change_t);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%Invariants to the investment horizon
+%
+comp_mean_hor = comp_mean_t .* horizon;
+comp_cov_hor = comp_cov_t .* horizon;
+
+civ_mean_hor = civ_mean_t .* horizon;
+civ_cov_hor = civ_cov_t .* horizon;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Distribution of prices in horizon
+% Get mean and variance of the prices in the investment horizon
+[ prices_simul, call_simul ] = simulatePrices( comp_mean_hor, comp_cov_hor, civ_mean_hor, civ_cov_hor, J, stock_pt, iv_pt, r, ((v*365)-horizon)/365);
+market_mean_hor = mean([ prices_simul, call_simul ]);
+market_cov_hor = mean([ prices_simul, call_simul ]);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
